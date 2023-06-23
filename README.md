@@ -1,0 +1,1 @@
+Maxar Geospatial Platform SDK for Java coming soon!
