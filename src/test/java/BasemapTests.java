@@ -1,0 +1,296 @@
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import io.github.maxar.MGPSDK.Basemap;
+import io.github.maxar.MGPSDK.BasemapFeatureCollection;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.HashMap;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+public class BasemapTests {
+
+    private final String BBOX = "39.84387,-105.05608,39.95133,-104.94827";
+    private final String BBOX_3857 = "4828455.4171,-11686562.3554,4830614.7631,-11684030.3789";
+    private final String FILTER = "product_name='VIVID_STANDARD_30'";
+    private long bytes;
+
+    @Test
+    @DisplayName("WFS Search with a bbox")
+    void TestWfsSearchWithBbox() {
+        Basemap basemapTest = Basemap.builder()
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .build();
+        BasemapFeatureCollection results = basemapTest.search();
+        assertEquals(results.numberReturned(), results.features().length);
+        assertTrue(results.numberReturned() > 0);
+        System.out.println("Number of results: " + results.features().length);
+    }
+
+    @Test
+    @DisplayName("WFS Search with 3857 Bbox")
+    void TestWfsSearchWith3857Bbox() {
+        Basemap basemapTest = Basemap.builder()
+            .bbox(BBOX_3857)
+            .srsname("EPSG:3857")
+            .build();
+        BasemapFeatureCollection results = basemapTest.search();
+        assertEquals(results.numberReturned(), results.features().length);
+        assertTrue(results.numberReturned() > 0);
+        System.out.println("Number of results: " + results.features().length);
+    }
+
+    @Test
+    @DisplayName("WFS Search with 3857 bbox and CQL filter")
+    void TestWfsSearchWith3857BboxAndFilter() {
+        Basemap basemapTest = Basemap.builder()
+            .bbox(BBOX_3857)
+            .srsname("EPSG:3857")
+            .filter(FILTER)
+            .build();
+        BasemapFeatureCollection results = basemapTest.search();
+        assertEquals(results.numberReturned(), results.features().length);
+        assertTrue(results.numberReturned() > 0);
+        System.out.println("Number of results: " + results.features().length);
+    }
+
+    @Test
+    @DisplayName("WFS Search with bbox and CQL filter")
+    void TestWfsSearchWithBboxAndFilter() {
+        Basemap basemapTest = Basemap.builder()
+            .filter(FILTER)
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .build();
+        BasemapFeatureCollection results = basemapTest.search();
+        assertEquals(results.numberReturned(), results.features().length);
+        assertTrue(results.numberReturned() > 0);
+        System.out.println("Number of results: " + results.features().length);
+    }
+
+    @Test
+    @DisplayName("Test bad bbox")
+    void TestWfsSearchWithMalformedBbox() {
+        String badBbox = "99,-105.05608,39.95133,-104.94827";
+        Basemap basemapTest = Basemap.builder()
+            .bbox(badBbox)
+            .build();
+        assertThrows(IllegalArgumentException.class, basemapTest::search);
+    }
+
+    @Test
+    @DisplayName("Test bad CQL filter")
+    void TestWfsSearchWithBadCqlFilter() {
+        String badFilter = "(acquisitionDate>='2022-01-01'cloudCover<0.20)";
+        Basemap basemapTest = Basemap.builder()
+            .bbox(BBOX)
+            .filter(badFilter)
+            .build();
+        assertThrows(IllegalArgumentException.class, basemapTest::search);
+    }
+
+    @Test
+    @DisplayName("WFS Search for shapefile")
+    void TestShapefileDownload() {
+        Basemap testBasemap = Basemap.builder()
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .filter(FILTER)
+            .fileName("test")
+            .build();
+
+        testBasemap.downloadShapeFile();
+        File file = new File(System.getProperty("user.home") + "/Downloads/test.zip");
+        assertTrue(file.exists());
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    @Test
+    @DisplayName("WFS Search for CSV")
+    void TestCsvDownload() {
+        Basemap testBasemap = Basemap.builder()
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .filter(FILTER)
+            .fileName("test")
+            .build();
+
+        testBasemap.downloadCsv();
+        File file = new File(System.getProperty("user.home") + "/Downloads/test.csv");
+        assertTrue(file.exists());
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    @Test
+    @DisplayName("WMS 4326 bbox with filter JPEG")
+    void testImageDownload() {
+        Basemap testBasemap = Basemap.builder()
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .filter(FILTER)
+            .height(500)
+            .width(500)
+            .imageFormat("jpeg")
+            .fileName("test")
+            .download()
+            .build();
+
+        testBasemap.downloadImage();
+        File file = new File(System.getProperty("user.home") + "/Downloads/test.jpeg");
+        try {
+            bytes = Files.size(file.toPath());
+        } catch (IOException e) {
+            System.out.println("File read error");
+        }
+        assertTrue(file.exists());
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    @Test
+    @DisplayName("WMS 3857 Bbox with filter PNG")
+    void test3857Download() {
+        String bbox3857 = "4828455.4171,-11686562.3554,4830614.7631,-11684030.3789";
+        Basemap testBasemap = Basemap.builder()
+            .bbox(bbox3857)
+            .srsname("EPSG:3857")
+            .height(500)
+            .width(500)
+            .imageFormat("png")
+            .fileName("test")
+            .download()
+            .build();
+
+        testBasemap.downloadImage();
+        File file = new File(System.getProperty("user.home") + "/Downloads/test.png");
+        try {
+            bytes = Files.size(file.toPath());
+        } catch (IOException e) {
+            System.out.println("File read error");
+        }
+        assertTrue(file.exists());
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    @Test
+    @DisplayName("WMS download to home directory GeoTiff")
+    void testCustomDirectoryDownload() {
+        Basemap testBasemap = Basemap.builder()
+            .bbox(BBOX)
+            .srsname("EPSG:4326")
+            .height(500)
+            .width(500)
+            .imageFormat("geotiff")
+            .downloadPath(System.getProperty("user.home"))
+            .fileName("test")
+            .download()
+            .build();
+
+        testBasemap.downloadImage();
+        File file = new File(System.getProperty("user.home") + "/test.geotiff");
+        try {
+            bytes = Files.size(file.toPath());
+        } catch (IOException e) {
+            System.out.println("File read error");
+        }
+        assertTrue(file.exists());
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
+    @Test
+    @DisplayName("WMS malformed bbox (Out of limits) JPEG")
+    void testBadBboxDownload() {
+        String badBbox = "99,-105.05608,39.95133,-104.94827";
+        Basemap testBasemap = Basemap.builder()
+            .bbox(badBbox)
+            .height(500)
+            .width(500)
+            .imageFormat("jpeg")
+            .downloadPath(System.getProperty("user.home"))
+            .fileName("test")
+            .build();
+
+        assertThrows(IllegalArgumentException.class, testBasemap::downloadImage);
+    }
+
+    @Test
+    @DisplayName("WMS bbox out of order PNG")
+    void testUnorderedBboxDownload() {
+        String unorderedBbox = "-105.05608,39.95133,-104.94827,39.84387";
+        Basemap testBasemap = Basemap.builder()
+            .bbox(unorderedBbox)
+            .height(500)
+            .width(500)
+            .imageFormat("png")
+            .downloadPath(System.getProperty("user.home"))
+            .fileName("test")
+            .build();
+
+        assertThrows(IllegalArgumentException.class, testBasemap::downloadImage);
+    }
+
+    @Test
+    @DisplayName("WMS incorrect image dimensions")
+    void testBadImageSize() {
+        Basemap testBasemap = Basemap.builder()
+            .bbox(BBOX)
+            .height(0)
+            .width(500)
+            .imageFormat("png")
+            .downloadPath(System.getProperty("user.home"))
+            .fileName("test")
+            .build();
+
+        assertThrows(IllegalArgumentException.class, testBasemap::downloadImage);
+    }
+
+    @Test
+    @DisplayName("WMTS 4326 bbox zoom level 11")
+    void testWmtsList() {
+        Basemap wmtsListTest = Basemap.builder()
+            .bbox(BBOX)
+            .zoomLevel(11)
+            .build();
+
+        HashMap<String, String> results = wmtsListTest.getTileList();
+        assertTrue(results.size() > 0);
+    }
+
+    @Test
+    @DisplayName("WMTS 4326 improper zoom level")
+    void testWmtsListBadZoom() {
+        Basemap wmtsListTest = Basemap.builder()
+            .bbox(BBOX)
+            .zoomLevel(35)
+            .build();
+
+        assertThrows(IllegalArgumentException.class, wmtsListTest::getTileList);
+    }
+
+    @Test
+    @DisplayName("WMTS 3857 bbox zoom level 11")
+    void testWmtsList3857() {
+        String bbox3857 = "4828455.4171,-11686562.3554,4830614.7631,-11684030.3789";
+        Basemap wmtsListTest = Basemap.builder()
+            .bbox(bbox3857)
+            .srsname("EPSG:3857")
+            .zoomLevel(11)
+            .build();
+
+        HashMap<String, String> results = wmtsListTest.getTileList();
+        assertTrue(results.size() > 0);
+    }
+
+}
